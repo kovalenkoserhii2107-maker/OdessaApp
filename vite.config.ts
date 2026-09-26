@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: './', // Для GitHub Pages
+  base: '/odessa-app/', // Для GitHub Pages
   plugins: [react(), VitePWA({
     registerType: 'prompt',
     includeAssets: ['icon.svg', 'apple-touch-icon.png'],
