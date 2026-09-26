@@ -3,6 +3,7 @@ import { User, Briefcase, AlertTriangle, CheckCircle, Shield } from 'lucide-reac
 import { CHARACTERS, SKILLS } from './game/content';
 import type { RoleId } from './game/types';
 import InstallPWA from './components/InstallPWA';
+import OdessaMap from './components/OdessaMap';
 import { useGameState } from './hooks/useGameState';
 import { auth, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -167,10 +168,11 @@ export default function App() {
         {screen === 'game' && activeCharacter && (
           <>
             {/* The "Map" Area */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(circle at center, #2b2b2b 0%, #1c1c1c 100%)' }}>
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#16191b' }}>
               
-              {/* Grid background for map feeling */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.05, backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '50px 50px' }}></div>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.7 }}>
+                <OdessaMap />
+              </div>
               
               {activeCases.length === 0 && (
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', color: '#444' }}>
