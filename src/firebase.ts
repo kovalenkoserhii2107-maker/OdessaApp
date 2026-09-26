@@ -6,12 +6,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/
 // 2. Project Settings -> General -> Your apps -> Web app
 // 3. Скопируйте объект firebaseConfig сюда:
 const firebaseConfig = {
-  apiKey: "AIzaSyYOUR_API_KEY",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef"
+  apiKey: "AIzaSyDzgkCTEMU_6hg0LDSgkdltQhYt7fUGd1U",
+  authDomain: "odessa-app-674ad.firebaseapp.com",
+  projectId: "odessa-app-674ad",
+  storageBucket: "odessa-app-674ad.firebasestorage.app",
+  messagingSenderId: "957968439975",
+  appId: "1:957968439975:web:bf1af100030e48f1bdd982",
+  measurementId: "G-8MRGLM4717"
 };
 
 const app = initializeApp(firebaseConfig);
