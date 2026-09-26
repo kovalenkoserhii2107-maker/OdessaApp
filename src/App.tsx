@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Briefcase, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
+import { User, Briefcase, AlertTriangle, CheckCircle } from 'lucide-react';
 import { CHARACTERS, SKILLS } from './game/content';
 import type { RoleId } from './game/types';
 import InstallPWA from './components/InstallPWA';
