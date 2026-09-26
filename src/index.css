@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-dark: #121619;
+  --bg-panel: #1e2528;
+  --text-main: #efeee6;
+  --text-muted: #8b999c;
+  --accent-gold: #c29d59;
+  --accent-red: #8f3b3b;
+  --accent-blue: #4a6b7c;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* Glassmorphism utils */
+.glass-panel {
+  background: rgba(30, 37, 40, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background-color: var(--accent-gold);
+  color: #121619;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  background-color: #d4b06e;
+  transform: translateY(-1px);
+}
+
+.btn-google {
+  background-color: white;
+  color: #333;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-google:hover {
+  background-color: #f0f0f0;
+}
