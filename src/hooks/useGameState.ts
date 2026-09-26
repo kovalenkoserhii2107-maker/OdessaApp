@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CASES, INITIAL_STAFF } from '../game/content';
-import type { GameState, RoleId, Decision, CaseFile } from '../game/types';
+import type { GameState, RoleId } from '../game/types';
 
 const INITIAL_STATE: GameState = {
   version: 1,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LogIn, User, MapPin, Clock, Briefcase, FileText } from 'lucide-react';
 import { CHARACTERS, SKILLS } from './game/content';
 import type { RoleId } from './game/types';
 import InstallPWA from './components/InstallPWA';
@@ -16,7 +17,7 @@ export default function App() {
 
   // Auth Listener
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: any) => {
       setUser(currentUser);
       setIsAuthLoading(false);
       if (currentUser && screen === 'login') {
@@ -27,7 +28,7 @@ export default function App() {
   }, [screen]);
   
   // Connect Game Engine
-  const { state, activeCases, availableStaff, makeDecision, advanceTick, resetGame } = useGameState(role);
+  const { state, activeCases, availableStaff, makeDecision, advanceTick } = useGameState(role);
   
   const handleLogin = async () => {
     try {

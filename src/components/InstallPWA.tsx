@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Share, PlusSquare, X } from 'lucide-react';
 
 export default function InstallPWA() {
