@@ -15,9 +15,9 @@ data.forEach(d => {
   
   let polygons = [];
   if (geo.type === 'Polygon') {
-    polygons = geo.coordinates; // array of rings
+    polygons = geo.coordinates;
   } else if (geo.type === 'MultiPolygon') {
-    polygons = geo.coordinates.flat(); // flatten MultiPolygon to array of rings
+    polygons = geo.coordinates.flat();
   }
 
   polygonsByDistrict[name] = polygons;
@@ -35,10 +35,8 @@ data.forEach(d => {
 });
 
 const width = 1000;
-const height = (maxLat - minLat) / (maxLon - minLon) * width; // preserve aspect ratio (roughly)
+const height = (maxLat - minLat) / (maxLon - minLon) * width;
 
-// For mercator at 46 deg lat, x scaling vs y scaling:
-// aspect ratio should be adjusted by cos(lat)
 const cosLat = Math.cos((minLat + maxLat) / 2 * Math.PI / 180);
 const adjustedHeight = height / cosLat;
 
@@ -53,14 +51,14 @@ let svgPaths = '';
 const colorMap = {
   'Київський район': 'var(--titp-accent-yellow)',
   'Приморський район': 'var(--titp-accent-red)',
-  'Пересипський район': 'var(--titp-accent-blue)', // Suvorovskiy
-  'Хаджибейський район': '#555' // Malinovskiy
+  'Пересипський район': 'var(--titp-accent-blue)',
+  'Хаджибейський район': '#555'
 };
 
 const labelMap = {
   'Київський район': 'Киевский',
   'Приморський район': 'Приморский',
-  'Пересипський район': 'Суворовский', // Keep old name for user
+  'Пересипський район': 'Суворовский',
   'Хаджибейський район': 'Малиновский'
 };
 
@@ -86,11 +84,12 @@ Object.entries(polygonsByDistrict).forEach(([name, polygons]) => {
 
 const reactComponent = `import React from 'react';
 
-export default function OdessaMap() {
+export default function OdessaMap({ children }: { children?: React.ReactNode }) {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <svg viewBox="0 0 ${width} ${adjustedHeight}" style={{ width: '100%', maxHeight: '100%', filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.5))' }}>
+      <svg viewBox="0 0 ${width} ${adjustedHeight}" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%', filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.5))' }}>
 ${svgPaths}
+        {children}
       </svg>
       <style>{\`
         .district-group path {
