@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, MapPin, Clock, Briefcase, FileText, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
+import { User, Briefcase, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
 import { CHARACTERS, SKILLS } from './game/content';
 import type { RoleId } from './game/types';
 import InstallPWA from './components/InstallPWA';
@@ -12,7 +12,7 @@ type Screen = 'login' | 'select' | 'game';
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
   const [role, setRole] = useState<RoleId | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
