@@ -1189,304 +1189,7 @@ legend > span {
     font-size: 30px;
   }
 }
-@media (max-width: 800px) {
-  .app-header {
-    padding: 15px 18px;
-  }
-  .app-header > .eyebrow {
-    display: none;
-  }
-  .entry-main {
-    grid-template-columns: 1fr;
-    gap: 35px;
-    max-width: 540px;
-    padding: 42px 24px;
-  }
-  .entry-story h1 {
-    font-size: 45px;
-  }
-  .entry-facts {
-    margin: 22px 0;
-  }
-  .entry-story .fiction-note {
-    display: none;
-  }
-  .login-panel {
-    padding: 25px;
-  }
-  .entry-footer {
-    padding: 17px 20px;
-    font-size: 9px;
-  }
-  .role-page {
-    padding: 32px 20px;
-  }
-  .role-page > h1 {
-    font-size: 33px;
-  }
-  .role-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-  .role-top {
-    height: 48px;
-    margin: 0;
-  }
-  .role-initial {
-    font-size: 48px;
-  }
-  .role-card > p {
-    min-height: 0;
-  }
-  .personal-goal {
-    min-height: 0;
-  }
-  .game-shell {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-  .game-header {
-    flex-wrap: wrap;
-    gap: 14px;
-  }
-  .game-header .brand {
-    order: 0;
-  }
-  .metrics {
-    order: 2;
-    width: 100%;
-    justify-content: space-between;
-    gap: 20px;
-    border-top: 1px solid var(--line);
-    padding-top: 12px;
-  }
-  .metric {
-    flex: 1;
-  }
-  .metric > strong {
-    font-size: 20px;
-  }
-  .shift-controls {
-    margin-left: auto;
-  }
-  .shift-controls > div {
-    display: none;
-  }
-  .shift-controls .btn-titp {
-    min-height: 38px;
-    padding: 8px 10px;
-    font-size: 10px;
-    gap: 5px;
-  }
-  .status-bar {
-    padding: 4px 15px;
-    flex-wrap: wrap;
-    gap: 3px 10px;
-  }
-  .status-bar > span:first-child {
-    font-size: 11px;
-    max-width: 60%;
-  }
-  .status-bar > div {
-    width: 100%;
-    justify-content: space-between;
-    border-top: 1px solid #ffffff08;
-  }
-  .mobile-tabs {
-    display: flex;
-    padding: 10px 12px;
-    gap: 7px;
-    background: #202726;
-  }
-  .mobile-tabs button {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 10px 6px;
-    color: #aeb9a9;
-    border: 1px solid #414c42;
-    font-size: 12px;
-  }
-  .mobile-tabs button[aria-pressed='true'] {
-    background: #d8a23a;
-    color: #1c2520;
-    border-color: #d8a23a;
-  }
-  .desk {
-    display: block;
-    min-height: 450px;
-    flex: 1;
-  }
-  .case-inbox,
-  .journal-panel,
-  .map-panel {
-    display: none;
-  }
-  .mobile-cases .case-inbox {
-    display: flex;
-    min-height: 450px;
-  }
-  .mobile-map .map-panel {
-    display: block;
-    height: 65dvh;
-    min-height: 450px;
-  }
-  .mobile-journal .journal-panel {
-    display: flex;
-    min-height: 450px;
-  }
-  .case-inbox,
-  .journal-panel {
-    border: 0;
-  }
-  .case-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 0 15px 18px;
-    overflow: visible;
-  }
-  .case-card {
-    margin: 0;
-    padding: 15px 12px;
-  }
-  .case-card p {
-    font-size: 12px;
-  }
-  .case-card h3 {
-    font-size: 18px;
-  }
-  .case-location {
-    font-size: 10px;
-  }
-  .empty-state {
-    grid-column: 1/-1;
-  }
-  .journal-list {
-    overflow: visible;
-  }
-  .journal-entry p {
-    font-size: 12px;
-  }
-  .journal-footer {
-    margin-top: 18px;
-  }
-  .roster-strip {
-    display: block;
-    padding: 18px 15px;
-  }
-  .roster-heading {
-    border-right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    padding: 0;
-  }
-  .roster-heading > strong {
-    font-size: 23px;
-  }
-  .roster-cards {
-    overflow: auto;
-    gap: 15px;
-    padding-bottom: 12px;
-  }
-  .roster-person {
-    min-width: 170px;
-  }
-  .staff-monogram {
-    display: grid;
-    flex-shrink: 0;
-    width: 34px;
-    height: 43px;
-    font-size: 12px;
-  }
-  .reset-button {
-    width: auto;
-    margin-top: 10px;
-  }
-  .game-disclaimer {
-    padding: 10px 15px 20px;
-  }
-  .dossier-header {
-    padding: 20px;
-  }
-  .dossier-header h2 {
-    font-size: 24px;
-  }
-  .dossier-content {
-    padding: 18px 20px;
-  }
-  .case-body {
-    font-size: 12px;
-  }
-  .dossier-footer {
-    padding: 16px 20px;
-    gap: 12px;
-  }
-  .dossier-footer .btn-titp {
-    padding: 10px 13px;
-    font-size: 12px;
-  }
-  .toast {
-    bottom: 15px;
-  }
-  .install-prompt {
-    right: 16px;
-    bottom: 16px;
-  }
-}
-@media (max-width: 420px) {
-  .case-list {
-    grid-template-columns: 1fr;
-  }
-  .assignment-grid {
-    grid-template-columns: 1fr;
-  }
-  .assignment {
-    display: grid;
-    grid-template-columns: 24px 1fr;
-    gap: 3px 8px;
-    padding: 10px;
-  }
-  .assignment-top {
-    grid-row: 1/4;
-    margin: 0;
-    display: block;
-  }
-  .assignment small {
-    grid-column: 2;
-  }
-  .dossier-footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .role-card {
-    padding: 20px;
-  }
-  .brand {
-    font-size: 13px;
-  }
-  .brand > svg {
-    width: 19px;
-  }
-  .brand span {
-    font-size: 7px;
-    letter-spacing: 2px;
-  }
-  .shift-controls .btn-titp {
-    font-size: 9px;
-  }
-  .status-bar > span {
-    font-size: 10px;
-  }
-  .entry-story h1 {
-    font-size: 40px;
-  }
-}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1557,11 +1260,105 @@ legend > span {
 .mobile-shift-label {
   display: none;
 }
-@media (max-width: 800px) {
-  .mobile-shift-label {
-    display: inline;
-    color: #d7c492;
-    font-size: 10px;
-    margin-left: auto;
-  }
+
+.phone-team-actions {
+  display: none;
+}
+.dossier-progress {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  background: #e5ddc4;
+  padding: 0 24px;
+}
+.dossier-progress span {
+  height: 3px;
+  background: #c3bba3;
+  flex: 1;
+}
+.dossier-progress .complete {
+  background: #687b55;
+}
+.dossier-footer {
+  display: block;
+}
+.decision-budget {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.decision-budget p {
+  margin: 0;
+}
+.decision-actions {
+  display: flex;
+  gap: 12px;
+}
+.decision-actions .btn-titp {
+  flex: 1;
+  min-height: 48px;
+}
+.decision-back {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  min-height: 48px;
+  border: 1px solid #8d8e77;
+  color: #344c3d;
+}
+.decision-recap {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #d1d0b9;
+  margin-bottom: 24px;
+  color: #34483a;
+}
+.decision-recap span {
+  display: block;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.decision-recap strong {
+  font-size: 19px;
+  font-weight: 500;
+}
+.decision-recap p,
+.assignment-help {
+  font:
+    14px/1.5 Arial,
+    sans-serif;
+  margin-top: 10px;
+}
+.assignment-help {
+  color: #6c4b3d;
+}
+.dossier-modal .assignment-grid {
+  grid-template-columns: 1fr;
+}
+.dossier-modal .assignment {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 5px 12px;
+  padding: 16px;
+  min-height: 88px;
+}
+.dossier-modal .assignment-top {
+  grid-row: 1/4;
+  align-self: center;
+  margin: 0;
+}
+.dossier-modal .assignment strong {
+  font-size: 18px;
+}
+.dossier-modal .assignment > span:not(.assignment-top) {
+  font-size: 12px;
+}
+.dossier-modal .assignment small {
+  grid-column: 2;
+  font-size: 12px;
 }

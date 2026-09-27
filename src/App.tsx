@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
   Briefcase,
-  Check,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -20,9 +19,9 @@ import {
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { CASES, CHARACTERS, SKILLS } from './game/content';
-import type { CaseFile, GameState } from './game/types';
-import { decisionError, isAvailable } from './game/engine';
+import { isAvailable } from './game/engine';
 import InstallPWA from './components/InstallPWA';
+import Dossier from './components/Dossier';
 const OdessaMap = lazy(() => import('./components/OdessaMap'));
 import { useGameState } from './hooks/useGameState';
 
@@ -218,8 +217,13 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
   } = useGameState(demo);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'story' | 'personal'>('all');
-  const [mobileView, setMobileView] = useState<'cases' | 'map' | 'journal'>('cases');
+  const [mobileView, setMobileView] = useState<'cases' | 'map' | 'journal' | 'team'>('cases');
   const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const activeCharacter = CHARACTERS.find((character) => character.id === state.selectedRole);
   const activeCase = activeCases.find((file) => file.id === selectedCaseId);
   const visibleCases = activeCases.filter((file) => filter === 'all' || file.kind === filter);
@@ -296,7 +300,7 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
     );
 
   return (
-    <div className="game-shell">
+    <div className={`game-shell view-${mobileView}`}>
       <header className="app-header game-header">
         <Brand />
         <div className="metrics">
@@ -370,6 +374,7 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
             ['cases', 'Входящие', Briefcase],
             ['map', 'Карта', MapPin],
             ['journal', 'Журнал', BookOpen],
+            ['team', 'Команда', Users],
           ] as const
         ).map(([id, title, Icon]) => (
           <button key={id} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>
@@ -382,7 +387,9 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
         <section className="case-inbox" aria-label="Входящие дела">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">НА ВАШЕМ СТОЛЕ</span>
+              <span className="eyebrow">
+                День {Math.floor(state.tick / 2) + 1} · {state.tick % 2 === 0 ? 'Утро' : 'Вечер'}
+              </span>
               <h2>Входящие</h2>
             </div>
             <span className="count-badge">{activeCases.length}</span>
@@ -604,6 +611,17 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
           <RotateCcw size={13} />
           Новая кампания
         </button>
+        <div className="phone-team-actions">
+          <button className="btn-secondary" onClick={() => selectRole(null)}>
+            <Users size={18} />
+            Сменить героя
+          </button>
+          <button className="btn-secondary" onClick={onLeave}>
+            <LogOut size={18} />
+            Выйти из кампании
+          </button>
+          <p>Прогресс сохранён в этом браузере. Онлайн-синхронизация ещё не подключена.</p>
+        </div>
       </section>
       <p className="game-disclaimer">
         Вымышленная история · {demo ? 'Демо сохраняется отдельно' : 'Сохранено в этом браузере'} ·
@@ -632,160 +650,5 @@ function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
         </div>
       )}
     </div>
-  );
-}
-
-function Dossier({
-  file,
-  state,
-  onClose,
-  onSubmit,
-}: {
-  file: CaseFile;
-  state: GameState;
-  onClose: () => void;
-  onSubmit: (choice: string, staff: string) => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [choiceId, setChoiceId] = useState('');
-  const [staffId, setStaffId] = useState('');
-  const choice = file.choices.find((item) => item.id === choiceId);
-  const staff = state.staff.filter((item) => item.role === file.role);
-  const error = decisionError(state, file.role, file.id, choiceId, staffId);
-  useEffect(() => {
-    const element = dialog.current!;
-    const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    element.showModal();
-    return () => {
-      element.close();
-      focused?.focus();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={dialog}
-      className="dossier-modal"
-      aria-labelledby="dossier-title"
-      onCancel={onClose}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          const rect = event.currentTarget.getBoundingClientRect();
-          if (
-            event.clientX < rect.left ||
-            event.clientX > rect.right ||
-            event.clientY < rect.top ||
-            event.clientY > rect.bottom
-          )
-            onClose();
-        }
-      }}
-    >
-      <header className="dossier-header">
-        <div>
-          <span className="eyebrow">ДЕЛО / {file.reference}</span>
-          <h2 id="dossier-title">{file.title}</h2>
-        </div>
-        <button className="icon-button" aria-label="Закрыть досье" onClick={onClose}>
-          <X size={23} />
-        </button>
-      </header>
-      <div className="dossier-content">
-        <div className="dossier-meta">
-          <span>
-            <Briefcase size={14} />
-            {file.sender}
-          </span>
-          <span>
-            <MapPin size={14} />
-            {file.location}
-          </span>
-        </div>
-        <p className="case-body">{file.body}</p>
-        <fieldset>
-          <legend>
-            <span>01</span> Выберите решение
-          </legend>
-          <div className="choices">
-            {file.choices.map((item) => (
-              <label className={`choice ${choiceId === item.id ? 'selected' : ''}`} key={item.id}>
-                <input
-                  type="radio"
-                  name="decision"
-                  value={item.id}
-                  checked={choiceId === item.id}
-                  onChange={() => {
-                    setChoiceId(item.id);
-                    setStaffId('');
-                  }}
-                />
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.description}</p>
-                  <span>
-                    {item.skill ? SKILLS[item.skill] : 'Любой сотрудник'}
-                    <b>−{item.cost} ресурса</b>
-                  </span>
-                </div>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>
-            <span>02</span> Назначьте сотрудника
-          </legend>
-          <div className="assignment-grid">
-            {staff.map((person) => {
-              const available = isAvailable(person, state.tick);
-              const matches = !choice?.skill || choice.skill === person.skill;
-              return (
-                <button
-                  key={person.id}
-                  disabled={!available || !matches || !choice}
-                  className={`assignment ${staffId === person.id ? 'selected' : ''}`}
-                  aria-pressed={staffId === person.id}
-                  onClick={() => setStaffId(person.id)}
-                >
-                  <span className="assignment-top">
-                    <Users size={17} />
-                    {staffId === person.id && <Check size={16} />}
-                  </span>
-                  <strong>{person.name}</strong>
-                  <span>{SKILLS[person.skill]}</span>
-                  <small>
-                    {!available
-                      ? 'Занят / отдыхает'
-                      : !choice
-                        ? 'Сначала выберите решение'
-                        : !matches
-                          ? 'Нужен другой навык'
-                          : 'Готов к поручению'}
-                  </small>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-      </div>
-      <footer className="dossier-footer">
-        <div>
-          <strong>
-            Ресурс: {state.resources[file.role]}
-            {choice ? ` → ${state.resources[file.role] - choice.cost}` : ''}
-          </strong>
-          <p>{error ?? 'Сотрудник вернётся к следующей смене.'}</p>
-        </div>
-        <button
-          className="btn-titp"
-          disabled={Boolean(error)}
-          onClick={() => {
-            if (!error) onSubmit(choiceId, staffId);
-          }}
-        >
-          Отправить
-          <ArrowRight size={17} />
-        </button>
-      </footer>
-    </dialog>
   );
 }

@@ -10,6 +10,7 @@ import '@fontsource/oswald/latin-600.css';
 import '@fontsource/roboto-mono/cyrillic-400.css';
 import '@fontsource/roboto-mono/latin-400.css';
 import './index.css';
+import './mobile.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
