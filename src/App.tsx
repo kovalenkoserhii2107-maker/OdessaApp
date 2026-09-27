@@ -36,7 +36,7 @@ export default function App() {
   }, [screen]);
   
   // Connect Game Engine
-  const { state, activeCases, availableStaff, makeDecision, advanceTick } = useGameState(role);
+  const { state, activeCases, availableStaff, makeDecision, advanceTick, resetGame } = useGameState(role);
   
   const handleLogin = async () => {
     try {
@@ -104,7 +104,10 @@ export default function App() {
               <button className="btn-titp" onClick={advanceTick} style={{ padding: '8px 16px', fontSize: '0.8rem' }}>
                 ЗАВЕРШИТЬ СМЕНУ 
               </button>
-              <button onClick={handleLogout} style={{ color: 'var(--titp-text-muted)', fontSize: '0.8rem', textDecoration: 'underline' }}>ВЫХОД</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button onClick={() => { if(window.confirm('Сбросить прогресс?')) { resetGame(); window.location.reload(); } }} style={{ color: 'var(--titp-accent-red)', fontSize: '0.7rem', textDecoration: 'underline' }}>СБРОС</button>
+                <button onClick={handleLogout} style={{ color: 'var(--titp-text-muted)', fontSize: '0.7rem', textDecoration: 'underline' }}>ВЫХОД</button>
+              </div>
             </div>
           </div>
         )}
@@ -168,6 +171,16 @@ export default function App() {
         {/* GAME SCREEN (TITP LAYOUT) */}
         {screen === 'game' && activeCharacter && (
           <>
+            {/* Cinematic Shift Overlay */}
+            <div key={`shift-${state.tick}`} className="shift-overlay">
+              <h2 style={{ fontSize: '4rem', color: 'var(--titp-accent-yellow)', letterSpacing: '4px' }}>
+                ДЕНЬ {Math.floor(state.tick / 2) + 1}
+              </h2>
+              <h3 style={{ fontSize: '2rem', color: '#fff', opacity: 0.8 }}>
+                {state.tick % 2 === 0 ? 'УТРО (09:00)' : 'ВЕЧЕР (21:00)'}
+              </h3>
+            </div>
+
             {/* The "Map" Area */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#16191b' }}>
               
@@ -229,10 +242,14 @@ export default function App() {
                 const isAvailable = staff.busyUntilTick <= state.tick;
                 const isSelected = selectedStaffId === staff.id;
                 
+                // Determine if this staff is highlighted for the selected choice
+                const selectedChoice = activeCase?.choices.find(c => c.id === selectedChoiceId);
+                const isHighlighted = isAvailable && selectedChoice && selectedChoice.skill === staff.skill;
+                
                 return (
                   <div 
                     key={staff.id} 
-                    className={`staff-card ${isSelected ? 'selected' : ''} ${!isAvailable ? 'busy' : ''}`}
+                    className={`staff-card ${isSelected ? 'selected' : ''} ${!isAvailable ? 'busy' : ''} ${isHighlighted ? 'highlight' : ''}`}
                     onClick={() => {
                       if (isAvailable) setSelectedStaffId(isSelected ? null : staff.id);
                     }}
@@ -276,11 +293,21 @@ export default function App() {
                           border: `2px solid ${selectedChoiceId === choice.id ? '#8f342d' : '#888'}`, 
                           padding: '12px', 
                           cursor: 'pointer',
-                          backgroundColor: selectedChoiceId === choice.id ? 'rgba(143, 52, 45, 0.1)' : 'transparent'
+                          backgroundColor: selectedChoiceId === choice.id ? 'rgba(143, 52, 45, 0.1)' : 'transparent',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
                         }}
                         onClick={() => setSelectedChoiceId(choice.id)}
                       >
-                        <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '4px' }}>{choice.title}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{choice.title}</div>
+                          {choice.skill && (
+                            <div style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: '#4CAF50', color: '#fff', borderRadius: '4px', fontWeight: 700 }}>
+                              ТРЕБУЕТСЯ: {SKILLS[choice.skill].toUpperCase()}
+                            </div>
+                          )}
+                        </div>
                         <div className="mono" style={{ fontSize: '0.8rem', color: '#444' }}>{choice.description}</div>
                       </div>
                     ))}

@@ -187,3 +187,32 @@ button {
   background: rgba(0,0,0,0.7);
   z-index: 99;
 }
+
+/* Cinematic Shift Overlay */
+@keyframes fadeOutTitle {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+.shift-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #0c0c0c;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  pointer-events: none;
+  animation: fadeOutTitle 3.5s forwards;
+}
+
+/* Skill highlight in roster */
+.staff-card.highlight {
+  border-color: #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+.staff-card.highlight .staff-rating {
+  background-color: #4CAF50;
+  color: white;
+}
