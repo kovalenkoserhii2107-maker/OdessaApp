@@ -1,353 +1,791 @@
-import React, { useState } from 'react';
-import { User, Briefcase, AlertTriangle, CheckCircle } from 'lucide-react';
-import { CHARACTERS, SKILLS } from './game/content';
-import type { RoleId } from './game/types';
-import InstallPWA from './components/InstallPWA';
-import OdessaMap from './components/OdessaMap';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import type { User as FirebaseUser } from 'firebase/auth';
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Briefcase,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Landmark,
+  LogOut,
+  MapPin,
+  Minus,
+  Plus,
+  RotateCcw,
+  Users,
+  X,
+} from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { CASES, CHARACTERS, SKILLS } from './game/content';
+import type { CaseFile, GameState } from './game/types';
+import { decisionError, isAvailable } from './game/engine';
+import InstallPWA from './components/InstallPWA';
+const OdessaMap = lazy(() => import('./components/OdessaMap'));
 import { useGameState } from './hooks/useGameState';
-import { auth, loginWithGoogle, logout } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 
-type Screen = 'login' | 'select' | 'game';
+function authMessage(error: unknown) {
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+  const messages: Record<string, string> = {
+    'auth/popup-closed-by-user': 'Окно входа закрыто. Можно попробовать ещё раз.',
+    'auth/cancelled-popup-request': 'Вход уже открыт в другом окне.',
+    'auth/popup-blocked':
+      'Браузер заблокировал окно Google. Разрешите всплывающее окно для этого сайта.',
+    'auth/network-request-failed': 'Нет соединения с Google. Проверьте интернет или откройте демо.',
+    'auth/unauthorized-domain':
+      'Этот адрес ещё не добавлен в разрешённые домены Firebase. Пока доступна демо-кампания.',
+  };
+  return messages[code] ?? 'Не удалось войти. Попробуйте ещё раз или откройте демо-кампанию.';
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('login');
-  const [role, setRole] = useState<RoleId | null>(null);
-  const [, setUser] = useState<any>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  // TitP UI States
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-
-  // Auth Listener
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser: any) => {
-      setUser(currentUser);
-      setIsAuthLoading(false);
-      if (currentUser && screen === 'login') {
-        setScreen('select');
-      }
-    });
-    return () => unsubscribe();
-  }, [screen]);
-  
-  // Connect Game Engine
-  const { state, activeCases, availableStaff, makeDecision, advanceTick, resetGame } = useGameState(role);
-  
-  const handleLogin = async () => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [demo, setDemo] = useState(() => {
     try {
-      setAuthError(null);
+      return sessionStorage.getItem('odessa-demo') === 'yes';
+    } catch {
+      return false;
+    }
+  });
+  const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    let unsubscribe: (() => void) | undefined;
+    import('./firebase')
+      .then(({ observeAuth }) => {
+        if (!alive) return;
+        unsubscribe = observeAuth((current) => {
+          setUser(current);
+          setLoading(false);
+        });
+      })
+      .catch(() => {
+        if (alive) {
+          setLoading(false);
+          setError('Не удалось подключить вход Google. Демо доступно без подключения.');
+        }
+      });
+    return () => {
+      alive = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  async function login() {
+    setSigningIn(true);
+    setError(null);
+    try {
+      const { loginWithGoogle } = await import('./firebase');
       await loginWithGoogle();
-    } catch (e: any) {
-      console.log('Login failed', e);
-      setAuthError(e.message || "Неизвестная ошибка при входе");
+    } catch (reason) {
+      setError(authMessage(reason));
+    } finally {
+      setSigningIn(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    setRole(null);
-    setScreen('login');
-  };
-  
-  const handleSelectRole = (selectedRole: RoleId) => {
-    setRole(selectedRole);
-    setScreen('game');
-  };
-
-  const activeCharacter = CHARACTERS.find(c => c.id === role);
-
-  const handleMakeDecision = () => {
-    if (selectedCaseId && selectedChoiceId && selectedStaffId) {
-      makeDecision(selectedCaseId, selectedChoiceId, selectedStaffId);
-      setSelectedCaseId(null);
-      setSelectedChoiceId(null);
-      setSelectedStaffId(null);
+  }
+  async function leave() {
+    if (demo) {
+      setDemo(false);
+      try {
+        sessionStorage.removeItem('odessa-demo');
+      } catch {
+        /* optional preference */
+      }
+      return;
     }
-  };
+    try {
+      const { logout } = await import('./firebase');
+      await logout();
+    } catch (reason) {
+      setError(authMessage(reason));
+    }
+  }
+  return (
+    <>
+      {user || demo ? (
+        <Game key={demo ? 'demo' : user!.uid} demo={demo} onLeave={leave} />
+      ) : (
+        <div className="entry-shell">
+          <header className="app-header">
+            <Brand />
+            <span className="eyebrow">СЮЖЕТНАЯ СТРАТЕГИЯ · РАННЯЯ ВЕРСИЯ</span>
+          </header>
+          <main className="entry-main">
+            <section className="entry-story">
+              <span className="eyebrow accent">ОДНО ДЕЛО. ТРИ ТОЧКИ ЗРЕНИЯ.</span>
+              <h1>
+                Город помнит
+                <br />
+                ваши решения.
+              </h1>
+              <p>
+                В мэрии говорят: всё готово. В бюджете — другие цифры. В системе — другая история.
+                Разберитесь, что связывает три версии одного отчёта.
+              </p>
+              <div className="entry-facts">
+                <span>
+                  <Clock3 size={17} /> 5–10 минут за заход
+                </span>
+                <span>
+                  <Users size={17} /> Три игровых героя
+                </span>
+              </div>
+              <span className="fiction-note">
+                Альтернативная Одесса. События, диалоги и мотивы персонажей вымышлены.
+              </span>
+            </section>
+            <section className="panel login-panel">
+              <Landmark size={32} className="accent" />
+              <span className="eyebrow">ЛИЧНОЕ ДЕЛО / ДОСТУП</span>
+              <h2>Войти в штаб</h2>
+              <p>Продолжите через Google или познакомьтесь с городом в отдельной демо-кампании.</p>
+              <button
+                className="btn-titp login-button"
+                onClick={login}
+                disabled={loading || signingIn}
+              >
+                {loading ? 'Подключение…' : signingIn ? 'Открываем Google…' : 'Войти через Google'}
+                <ArrowRight size={17} />
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setDemo(true);
+                  try {
+                    sessionStorage.setItem('odessa-demo', 'yes');
+                  } catch {
+                    /* optional preference */
+                  }
+                }}
+              >
+                Попробовать демо
+              </button>
+              {error && (
+                <p role="alert" className="error-text">
+                  {error}
+                </p>
+              )}
+              <small>
+                Сейчас прогресс хранится в этом браузере. Совместная игра ещё в разработке.
+              </small>
+            </section>
+          </main>
+          <footer className="entry-footer">
+            <span>ОДЕССА: КОНТУР</span>
+            <span>Рабочее название · Глава 01</span>
+          </footer>
+        </div>
+      )}
+      {error && (user || demo) && (
+        <div role="alert" className="toast">
+          {error}
+          <button aria-label="Закрыть уведомление" onClick={() => setError(null)}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+      <InstallPWA />
+    </>
+  );
+}
 
-  const activeCase = activeCases.find(c => c.id === selectedCaseId);
+function Brand() {
+  return (
+    <div className="brand">
+      <Landmark size={23} />
+      <div>
+        ОДЕССА: КОНТУР<span>ГОРОДСКОЕ ДЕЛО</span>
+      </div>
+    </div>
+  );
+}
+
+function Game({ demo, onLeave }: { demo: boolean; onLeave: () => void }) {
+  const {
+    state,
+    activeCases,
+    availableStaff,
+    selectRole,
+    makeDecision,
+    advanceTick,
+    resetGame,
+    storageWarning,
+  } = useGameState(demo);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'story' | 'personal'>('all');
+  const [mobileView, setMobileView] = useState<'cases' | 'map' | 'journal'>('cases');
+  const [notice, setNotice] = useState('');
+  const activeCharacter = CHARACTERS.find((character) => character.id === state.selectedRole);
+  const activeCase = activeCases.find((file) => file.id === selectedCaseId);
+  const visibleCases = activeCases.filter((file) => filter === 'all' || file.kind === filter);
+  const journal = state.journal
+    .filter((entry) => entry.audience === state.selectedRole || entry.audience === 'all')
+    .slice()
+    .reverse();
+  const totalCases = CASES.filter((file) => file.role === state.selectedRole).length;
+  const completedCases = state.decisions.filter(
+    (decision) => CASES.find((file) => file.id === decision.caseId)?.role === state.selectedRole,
+  ).length;
+
+  function shift() {
+    setSelectedCaseId(null);
+    advanceTick();
+    setNotice('Смена завершена. Команда отдохнула, ответы добавлены в журнал.');
+  }
+
+  if (!activeCharacter)
+    return (
+      <div className="entry-shell">
+        <header className="app-header">
+          <Brand />
+          <button className="text-button" onClick={onLeave}>
+            <LogOut size={16} /> Выйти
+          </button>
+        </header>
+        <main className="role-page">
+          <span className="eyebrow accent">
+            {demo ? 'ДЕМО-КАМПАНИЯ' : 'ЛОКАЛЬНАЯ КАМПАНИЯ'} / ВЫБОР ГЕРОЯ
+          </span>
+          <h1>У каждого своя правда.</h1>
+          <p className="page-intro">
+            Выберите, с чьей стороны начать. У каждого — свои люди, обязательства и часть общего
+            дела.
+          </p>
+          <div className="role-grid">
+            {CHARACTERS.map((character) => (
+              <article
+                key={character.id}
+                className="panel role-card"
+                style={{ borderTopColor: character.color }}
+              >
+                <div className="role-top">
+                  <span className="role-number">0{CHARACTERS.indexOf(character) + 1}</span>
+                  <span className="role-initial" style={{ color: character.color }}>
+                    {character.initials}
+                  </span>
+                  <Landmark size={26} />
+                </div>
+                <span className="eyebrow" style={{ color: character.color }}>
+                  {character.area}
+                </span>
+                <h2>{character.name}</h2>
+                <strong>{character.title}</strong>
+                <p>{character.description}</p>
+                <div className="personal-goal">
+                  <span className="eyebrow">ЛИЧНЫЙ ИНТЕРЕС</span>
+                  {character.personalGoal}
+                </div>
+                <button className="btn-titp" onClick={() => selectRole(character.id)}>
+                  Выбрать: {character.name}
+                  <ArrowRight size={17} />
+                </button>
+              </article>
+            ))}
+          </div>
+          <p className="fiction-note">
+            В этой версии можно переключаться между героями одной локальной кампании. Выбор не
+            занимает место другого игрока.
+          </p>
+        </main>
+      </div>
+    );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      
-      {/* HEADER (TitP Style) */}
-      <header className="panel" style={{ padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-        <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--titp-accent-yellow)' }}>ОДЕССА: КОНТУР</h1>
-        
-        {screen === 'game' && activeCharacter && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <div style={{ display: 'flex', gap: '24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--titp-text-muted)' }}>ДОВЕРИЕ</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--titp-accent-blue)' }}>{state.metrics.trust}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--titp-text-muted)' }}>СТАБИЛЬНОСТЬ</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--titp-accent-yellow)' }}>{state.metrics.stability}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--titp-text-muted)' }}>ФАКТЫ</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--titp-accent-red)' }}>{state.metrics.evidence}</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '1px solid #444', paddingLeft: '24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 700 }}>День {Math.floor(state.tick / 2) + 1}</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--titp-text-muted)' }}>{state.tick % 2 === 0 ? 'УТРО (09:00)' : 'ВЕЧЕР (21:00)'}</span>
-              </div>
-              <button className="btn-titp" onClick={advanceTick} style={{ padding: '8px 16px', fontSize: '0.8rem' }}>
-                ЗАВЕРШИТЬ СМЕНУ 
-              </button>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <button onClick={() => { if(window.confirm('Сбросить прогресс?')) { resetGame(); window.location.reload(); } }} style={{ color: 'var(--titp-accent-red)', fontSize: '0.7rem', textDecoration: 'underline' }}>СБРОС</button>
-                <button onClick={handleLogout} style={{ color: 'var(--titp-text-muted)', fontSize: '0.7rem', textDecoration: 'underline' }}>ВЫХОД</button>
+    <div className="game-shell">
+      <header className="app-header game-header">
+        <Brand />
+        <div className="metrics">
+          {(
+            [
+              ['trust', 'Доверие'],
+              ['stability', 'Стабильность'],
+              ['evidence', 'Факты'],
+            ] as const
+          ).map(([key, title]) => (
+            <div key={key} className={`metric metric-${key}`}>
+              <span>{title}</span>
+              <strong>
+                {state.metrics[key]}
+                <small>/100</small>
+              </strong>
+              <div className="meter">
+                <i style={{ width: `${state.metrics[key]}%` }} />
               </div>
             </div>
+          ))}
+        </div>
+        <div className="shift-controls">
+          <div>
+            <strong>
+              День {Math.floor(state.tick / 2) + 1} · {state.tick % 2 === 0 ? 'Утро' : 'Вечер'}
+            </strong>
+            <span>
+              Смена {state.tick + 1} · {demo ? 'демо' : 'локально'}
+            </span>
           </div>
-        )}
+          <button className="btn-titp" onClick={shift}>
+            Завершить смену
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </header>
-
-      {/* MAIN CONTENT */}
-      <main style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        
-        {/* LOGIN SCREEN */}
-        {screen === 'login' && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="panel" style={{ maxWidth: '400px', width: '100%', padding: '40px', textAlign: 'center' }}>
-              <h2 style={{ marginBottom: '16px', fontSize: '1.5rem', color: 'var(--titp-accent-yellow)' }}>ДОСТУП В ШТАБ</h2>
-              <p style={{ color: 'var(--titp-text-muted)', marginBottom: '32px', fontSize: '0.9rem', textTransform: 'uppercase' }}>
-                Синхронизация департаментов.<br/>Обновление данных каждые 12 часов.
-              </p>
-              {isAuthLoading ? (
-                <div style={{ padding: '12px', color: 'var(--titp-text-muted)' }}>ПОДКЛЮЧЕНИЕ К СЕРВЕРУ...</div>
-              ) : (
-                <button className="btn-titp" style={{ width: '100%', display: 'flex', gap: '12px', justifyContent: 'center' }} onClick={handleLogin}>
-                  <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                  ВОЙТИ ЧЕРЕЗ GOOGLE
-                </button>
-              )}
-              
-              {authError && (
-                <div style={{ marginTop: '16px', padding: '12px', border: '1px solid var(--titp-accent-red)', color: 'var(--titp-accent-red)', fontSize: '0.85rem' }}>
-                  {authError}
-                </div>
-              )}
+      <div className="status-bar">
+        <span>
+          <span className="status-dot" /> {activeCharacter.name} / {activeCharacter.area}
+        </span>
+        <span>
+          Ресурс ведомства <strong>{state.resources[activeCharacter.id]}</strong>
+        </span>
+        <div>
+          <button
+            onClick={() => {
+              selectRole(null);
+              setSelectedCaseId(null);
+            }}
+            className="text-button"
+          >
+            <Users size={14} /> Сменить героя
+          </button>
+          <span className="mobile-shift-label">
+            День {Math.floor(state.tick / 2) + 1} · {state.tick % 2 === 0 ? 'Утро' : 'Вечер'}
+          </span>
+          <button className="icon-button" aria-label="Выйти из кампании" onClick={onLeave}>
+            <LogOut size={16} />
+          </button>
+        </div>
+      </div>
+      {storageWarning && (
+        <p role="alert" className="storage-warning">
+          {storageWarning}
+        </p>
+      )}
+      <nav className="mobile-tabs" aria-label="Разделы штаба">
+        {(
+          [
+            ['cases', 'Входящие', Briefcase],
+            ['map', 'Карта', MapPin],
+            ['journal', 'Журнал', BookOpen],
+          ] as const
+        ).map(([id, title, Icon]) => (
+          <button key={id} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>
+            <Icon size={16} />
+            {title}
+          </button>
+        ))}
+      </nav>
+      <main className={`desk mobile-${mobileView}`}>
+        <section className="case-inbox" aria-label="Входящие дела">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">НА ВАШЕМ СТОЛЕ</span>
+              <h2>Входящие</h2>
             </div>
+            <span className="count-badge">{activeCases.length}</span>
           </div>
-        )}
-
-        {/* CHARACTER SELECT SCREEN */}
-        {screen === 'select' && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-            <div style={{ maxWidth: '900px', width: '100%' }}>
-              <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '2rem', color: 'var(--titp-accent-yellow)' }}>ВЫБЕРИТЕ ВЕДОМСТВО</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-                {CHARACTERS.map(char => (
-                  <div key={char.id} className="panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: `4px solid ${char.color}` }}>
-                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: char.color, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '2rem', color: '#121212', boxShadow: '2px 2px 0px rgba(0,0,0,0.5)' }}>
-                        {char.initials}
-                      </div>
-                      <h3 style={{ fontSize: '1.5rem', color: 'var(--titp-text-main)' }}>{char.name}</h3>
-                      <div style={{ fontSize: '0.85rem', color: char.color, fontWeight: 700 }}>{char.title}</div>
-                    </div>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--titp-text-muted)', flex: 1, textAlign: 'center' }}>{char.description}</p>
-                    <button className="btn-titp" style={{ backgroundColor: char.color, color: '#121212', width: '100%', marginTop: '16px' }} onClick={() => handleSelectRole(char.id)}>
-                      ПОДПИСАТЬ КОНТРАКТ
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="case-filters" aria-label="Фильтр дел">
+            {(
+              [
+                ['all', 'Все'],
+                ['story', 'Сюжет'],
+                ['personal', 'Личные'],
+              ] as const
+            ).map(([id, title]) => (
+              <button key={id} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+                {title}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* GAME SCREEN (TITP LAYOUT) */}
-        {screen === 'game' && activeCharacter && (
-          <>
-            {/* Cinematic Shift Overlay */}
-            <div key={`shift-${state.tick}`} className="shift-overlay">
-              <h2 style={{ fontSize: '4rem', color: 'var(--titp-accent-yellow)', letterSpacing: '4px' }}>
-                ДЕНЬ {Math.floor(state.tick / 2) + 1}
-              </h2>
-              <h3 style={{ fontSize: '2rem', color: '#fff', opacity: 0.8 }}>
-                {state.tick % 2 === 0 ? 'УТРО (09:00)' : 'ВЕЧЕР (21:00)'}
-              </h3>
-            </div>
-
-            {/* The "Map" Area */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#16191b' }}>
-              
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.8, cursor: 'grab' }}>
-                <TransformWrapper initialScale={1} minScale={0.5} maxScale={4} centerOnInit>
-                  <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
-                    <OdessaMap>
-                      {activeCases.map((c, index) => {
-                        const coords = [
-                          { x: 700, y: 900 }, // Приморский
-                          { x: 450, y: 900 }, // Малиновский
-                          { x: 600, y: 1400 }, // Киевский
-                          { x: 650, y: 300 } // Суворовский
-                        ][index % 4];
-                        
-                        return (
-                          <foreignObject key={c.id} x={coords.x - 100} y={coords.y - 100} width="200" height="200" style={{ overflow: 'visible' }}>
-                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                              <div className="map-case-icon" style={{ position: 'relative' }} onClick={(e) => { e.stopPropagation(); setSelectedCaseId(c.id); }}>
-                                {c.kind === 'story' ? <AlertTriangle size={24} /> : <Briefcase size={24} />}
-                              </div>
-                              <div style={{ marginTop: '12px', backgroundColor: 'rgba(0,0,0,0.8)', padding: '4px 12px', fontSize: '1rem', whiteSpace: 'nowrap', border: '1px solid #444', color: '#fff', fontWeight: 700, textAlign: 'center', borderRadius: '4px' }}>
-                                {c.title}
-                              </div>
-                            </div>
-                          </foreignObject>
-                        );
-                      })}
-                    </OdessaMap>
-                  </TransformComponent>
-                </TransformWrapper>
+          <div className="case-list">
+            {visibleCases.map((file) => (
+              <button
+                className={`case-card ${file.kind}`}
+                key={file.id}
+                onClick={() => setSelectedCaseId(file.id)}
+              >
+                <span className="case-type">
+                  {file.kind === 'story' ? <AlertTriangle size={14} /> : <Briefcase size={14} />}
+                  {file.kind === 'story' ? 'Общее дело' : 'Личное поручение'}
+                </span>
+                <h3>{file.title}</h3>
+                <p>{file.summary}</p>
+                <span className="case-location">
+                  <MapPin size={12} />
+                  {file.location}
+                  <ChevronRight size={16} />
+                </span>
+              </button>
+            ))}
+            {visibleCases.length === 0 && (
+              <div className="empty-state">
+                <CheckCircle2 size={28} />
+                <h3>{completedCases === totalCases ? 'Глава пройдена' : 'Папка разобрана'}</h3>
+                <p>
+                  {completedCases === totalCases
+                    ? 'Все дела этого героя закрыты. Можно изучить другую сторону истории или дождаться следующей главы.'
+                    : activeCases.length
+                      ? 'В этом разделе пока нет дел. Попробуйте другой фильтр.'
+                      : 'Команда ещё работает. Завершите смену — сотрудники вернутся, а история продолжится.'}
+                </p>
               </div>
-
-              {/* Event Journal (Right side overlay) */}
-              <div style={{ position: 'absolute', top: '20px', right: '20px', width: '300px', bottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'none' }}>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--titp-text-muted)', marginBottom: '8px' }}>ЖУРНАЛ ИНЦИДЕНТОВ</h3>
-                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'auto' }}>
-                  {state.journal.filter(j => j.audience === role || j.audience === 'all').reverse().map(j => (
-                    <div key={j.id} className="panel" style={{ padding: '12px', borderLeft: '3px solid var(--titp-accent-blue)' }}>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--titp-text-muted)', marginBottom: '4px' }}>СМЕНА {j.tick}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', lineHeight: 1.2 }}>{j.title}</div>
-                      <div className="mono" style={{ fontSize: '0.75rem', color: '#aaa', lineHeight: 1.4 }}>{j.text}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Roster Strip (Bottom) */}
-            <div className="panel" style={{ height: '140px', display: 'flex', alignItems: 'center', padding: '0 24px', gap: '16px', overflowX: 'auto', borderTop: '2px solid #111' }}>
-              <div style={{ width: '80px', flexShrink: 0, textAlign: 'center' }}>
-                <h3 style={{ fontSize: '0.8rem', color: 'var(--titp-text-muted)', marginBottom: '8px' }}>ШТАТ</h3>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--titp-accent-yellow)' }}>{availableStaff.length}/{state.staff.filter(s => s.role === role).length}</div>
-              </div>
-              
-              <div style={{ width: '1px', height: '80%', backgroundColor: '#444', margin: '0 8px' }}></div>
-
-              {state.staff.filter(s => s.role === role).map(staff => {
-                const isAvailable = staff.busyUntilTick <= state.tick;
-                const isSelected = selectedStaffId === staff.id;
-                
-                // Determine if this staff is highlighted for the selected choice
-                const selectedChoice = activeCase?.choices.find(c => c.id === selectedChoiceId);
-                const isHighlighted = isAvailable && selectedChoice && selectedChoice.skill === staff.skill;
-                
-                return (
-                  <div 
-                    key={staff.id} 
-                    className={`staff-card ${isSelected ? 'selected' : ''} ${!isAvailable ? 'busy' : ''} ${isHighlighted ? 'highlight' : ''}`}
-                    onClick={() => {
-                      if (isAvailable) setSelectedStaffId(isSelected ? null : staff.id);
-                    }}
-                  >
-                    <div className="staff-rating">{SKILLS[staff.skill].substring(0, 3)}</div>
-                    <div className="staff-portrait">
-                      <User size={40} color={isAvailable ? '#aaa' : '#444'} />
-                    </div>
-                    <div className="staff-name">{staff.name}</div>
-                    <div className="energy-bar-container">
-                      <div className="energy-bar" style={{ width: `${Math.max(0, 100 - staff.fatigue)}%`, backgroundColor: staff.fatigue > 70 ? 'var(--titp-accent-red)' : 'var(--titp-accent-blue)' }}></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* DOSSIER MODAL */}
-            {activeCase && (
+            )}
+          </div>
+          <div className="inbox-footer">
+            <span>Закрыто дел</span>
+            <strong>
+              {completedCases} / {totalCases}
+            </strong>
+          </div>
+        </section>
+        <section className="map-panel" aria-label="Карта Одессы">
+          <div className="map-heading">
+            <span className="eyebrow">ОПЕРАТИВНАЯ КАРТА</span>
+            <h2>Одесса</h2>
+            <span>Программа «Контур»</span>
+          </div>
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.8}
+            maxScale={4}
+            centerOnInit
+            doubleClick={{ disabled: true }}
+          >
+            {({ zoomIn, zoomOut, resetTransform }) => (
               <>
-                <div className="dossier-overlay" onClick={() => setSelectedCaseId(null)}></div>
-                <div className="dossier-modal">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #2b2b2b', paddingBottom: '16px', marginBottom: '24px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8f342d' }}>Д Е Л О  № {activeCase.id.toUpperCase()}</div>
-                      <h2 style={{ fontSize: '1.8rem', lineHeight: 1.1, marginTop: '4px' }}>{activeCase.title}</h2>
-                    </div>
-                    <button onClick={() => setSelectedCaseId(null)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#8f342d' }}>✕</button>
-                  </div>
-                  
-                  <div className="mono" style={{ fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '32px', color: '#1a1a1a', fontWeight: 500 }}>
-                    {activeCase.body}
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#555', textTransform: 'uppercase' }}>Варианты решений:</div>
-                    {activeCase.choices.map(choice => (
-                      <div 
-                        key={choice.id} 
-                        style={{ 
-                          border: `2px solid ${selectedChoiceId === choice.id ? '#8f342d' : '#888'}`, 
-                          padding: '12px', 
-                          cursor: 'pointer',
-                          backgroundColor: selectedChoiceId === choice.id ? 'rgba(143, 52, 45, 0.1)' : 'transparent',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px'
+                <TransformComponent
+                  wrapperClass="map-transform"
+                  wrapperStyle={{ width: '100%', height: '100%' }}
+                  contentStyle={{ width: '100%', height: '100%' }}
+                >
+                  <div className="map-content">
+                    <Suspense fallback={<span className="map-loading">Загрузка карты…</span>}>
+                      <OdessaMap />
+                    </Suspense>
+                    {visibleCases.map((file) => (
+                      <button
+                        key={file.id}
+                        className={`map-pin ${file.kind}`}
+                        style={{ left: `${file.coordinates[0]}%`, top: `${file.coordinates[1]}%` }}
+                        aria-label={`Открыть дело: ${file.title}`}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedCaseId(file.id);
                         }}
-                        onClick={() => setSelectedChoiceId(choice.id)}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{choice.title}</div>
-                          {choice.skill && (
-                            <div style={{ fontSize: '0.7rem', padding: '2px 6px', backgroundColor: '#4CAF50', color: '#fff', borderRadius: '4px', fontWeight: 700 }}>
-                              ТРЕБУЕТСЯ: {SKILLS[choice.skill].toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mono" style={{ fontSize: '0.8rem', color: '#444' }}>{choice.description}</div>
-                      </div>
+                        {file.kind === 'story' ? (
+                          <AlertTriangle size={20} />
+                        ) : (
+                          <Briefcase size={20} />
+                        )}
+                        <span>{file.location}</span>
+                      </button>
                     ))}
                   </div>
-
-                  <div style={{ marginTop: '32px', borderTop: '2px dashed #888', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                      {selectedStaffId ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '40px', height: '40px', backgroundColor: '#2b2b2b', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '4px' }}>
-                            <CheckCircle color="var(--titp-accent-yellow)" />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555' }}>ВЫБРАН СОТРУДНИК</div>
-                            <div style={{ fontSize: '1rem', fontWeight: 700 }}>{state.staff.find(s => s.id === selectedStaffId)?.name}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#8f342d' }}>
-                          ⚠️ ВЫБЕРИТЕ СОТРУДНИКА ВНИЗУ ЭКРАНА
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button 
-                      className="btn-titp" 
-                      style={{ opacity: (selectedChoiceId && selectedStaffId) ? 1 : 0.5, pointerEvents: (selectedChoiceId && selectedStaffId) ? 'auto' : 'none' }}
-                      onClick={handleMakeDecision}
-                    >
-                      ОТПРАВИТЬ
-                    </button>
-                  </div>
+                </TransformComponent>
+                <div className="map-tools">
+                  <button aria-label="Приблизить карту" onClick={() => zoomIn()}>
+                    <Plus size={19} />
+                  </button>
+                  <button aria-label="Отдалить карту" onClick={() => zoomOut()}>
+                    <Minus size={19} />
+                  </button>
+                  <button aria-label="Вернуть масштаб карты" onClick={() => resetTransform()}>
+                    <RotateCcw size={17} />
+                  </button>
                 </div>
               </>
             )}
-          </>
-        )}
-
+          </TransformWrapper>
+          <div className="map-legend">
+            <span>
+              <i className="story-dot" />
+              Общее дело
+            </span>
+            <span>
+              <i />
+              Личное поручение
+            </span>
+            <small>Расположение событий схематическое</small>
+          </div>
+        </section>
+        <aside className="journal-panel" aria-label="Журнал событий">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">ПАМЯТЬ ГОРОДА</span>
+              <h2>Журнал</h2>
+            </div>
+            <BookOpen size={20} />
+          </div>
+          <div className="journal-list">
+            {journal.map((entry) => (
+              <article className="journal-entry" key={entry.id}>
+                <span className="eyebrow">
+                  СМЕНА {entry.tick + 1} · {entry.audience === 'all' ? 'ОБЩЕЕ' : 'ЛИЧНОЕ'}
+                </span>
+                <h3>{entry.title}</h3>
+                <p>{entry.text}</p>
+              </article>
+            ))}
+          </div>
+          <div className="journal-footer">
+            <Clock3 size={14} />
+            <span>
+              Следующая смена автоматически
+              <br />
+              <strong>
+                {new Date(state.nextTickAt).toLocaleString('ru-RU', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </strong>
+            </span>
+          </div>
+        </aside>
       </main>
-      <InstallPWA />
+      <section className="roster-strip" aria-label="Сотрудники ведомства">
+        <div className="roster-heading">
+          <span className="eyebrow">ВАША КОМАНДА</span>
+          <strong>
+            {availableStaff.length}
+            <small> / 3 свободны</small>
+          </strong>
+        </div>
+        <div className="roster-cards">
+          {state.staff
+            .filter((staff) => staff.role === state.selectedRole)
+            .map((staff) => (
+              <div
+                className={`roster-person ${isAvailable(staff, state.tick) ? '' : 'busy'}`}
+                key={staff.id}
+              >
+                <span className="staff-monogram">
+                  {staff.name
+                    .split(' ')
+                    .map((word) => word[0])
+                    .join('')}
+                </span>
+                <div>
+                  <strong>{staff.name}</strong>
+                  <span>{SKILLS[staff.skill]}</span>
+                  <small>
+                    {isAvailable(staff, state.tick)
+                      ? `Готов к работе · энергия ${100 - staff.fatigue}%`
+                      : staff.busyUntilTick > state.tick
+                        ? 'На поручении до следующей смены'
+                        : 'Нужен отдых'}
+                  </small>
+                  <div className="energy-bar">
+                    <i style={{ width: `${100 - staff.fatigue}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+        <button
+          className="text-button reset-button"
+          onClick={() => {
+            if (
+              window.confirm(
+                'Начать эту локальную кампанию заново? Текущий прогресс будет сброшен.',
+              )
+            ) {
+              resetGame();
+              setSelectedCaseId(null);
+            }
+          }}
+        >
+          <RotateCcw size={13} />
+          Новая кампания
+        </button>
+      </section>
+      <p className="game-disclaimer">
+        Вымышленная история · {demo ? 'Демо сохраняется отдельно' : 'Сохранено в этом браузере'} ·
+        Онлайн-синхронизация ещё не подключена
+      </p>
+      {activeCase && (
+        <Dossier
+          key={activeCase.id}
+          file={activeCase}
+          state={state}
+          onClose={() => setSelectedCaseId(null)}
+          onSubmit={(choice, staff) => {
+            makeDecision(activeCase.id, choice, staff);
+            setSelectedCaseId(null);
+            setNotice('Поручение отправлено. Ответ сохранён в журнале.');
+          }}
+        />
+      )}
+      {notice && (
+        <div className="toast" role="status">
+          <CheckCircle2 size={18} />
+          <span>{notice}</span>
+          <button aria-label="Закрыть уведомление" onClick={() => setNotice('')}>
+            <X size={17} />
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Dossier({
+  file,
+  state,
+  onClose,
+  onSubmit,
+}: {
+  file: CaseFile;
+  state: GameState;
+  onClose: () => void;
+  onSubmit: (choice: string, staff: string) => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [choiceId, setChoiceId] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const choice = file.choices.find((item) => item.id === choiceId);
+  const staff = state.staff.filter((item) => item.role === file.role);
+  const error = decisionError(state, file.role, file.id, choiceId, staffId);
+  useEffect(() => {
+    const element = dialog.current!;
+    const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    element.showModal();
+    return () => {
+      element.close();
+      focused?.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="dossier-modal"
+      aria-labelledby="dossier-title"
+      onCancel={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          const rect = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom
+          )
+            onClose();
+        }
+      }}
+    >
+      <header className="dossier-header">
+        <div>
+          <span className="eyebrow">ДЕЛО / {file.reference}</span>
+          <h2 id="dossier-title">{file.title}</h2>
+        </div>
+        <button className="icon-button" aria-label="Закрыть досье" onClick={onClose}>
+          <X size={23} />
+        </button>
+      </header>
+      <div className="dossier-content">
+        <div className="dossier-meta">
+          <span>
+            <Briefcase size={14} />
+            {file.sender}
+          </span>
+          <span>
+            <MapPin size={14} />
+            {file.location}
+          </span>
+        </div>
+        <p className="case-body">{file.body}</p>
+        <fieldset>
+          <legend>
+            <span>01</span> Выберите решение
+          </legend>
+          <div className="choices">
+            {file.choices.map((item) => (
+              <label className={`choice ${choiceId === item.id ? 'selected' : ''}`} key={item.id}>
+                <input
+                  type="radio"
+                  name="decision"
+                  value={item.id}
+                  checked={choiceId === item.id}
+                  onChange={() => {
+                    setChoiceId(item.id);
+                    setStaffId('');
+                  }}
+                />
+                <div>
+                  <strong>{item.title}</strong>
+                  <p>{item.description}</p>
+                  <span>
+                    {item.skill ? SKILLS[item.skill] : 'Любой сотрудник'}
+                    <b>−{item.cost} ресурса</b>
+                  </span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            <span>02</span> Назначьте сотрудника
+          </legend>
+          <div className="assignment-grid">
+            {staff.map((person) => {
+              const available = isAvailable(person, state.tick);
+              const matches = !choice?.skill || choice.skill === person.skill;
+              return (
+                <button
+                  key={person.id}
+                  disabled={!available || !matches || !choice}
+                  className={`assignment ${staffId === person.id ? 'selected' : ''}`}
+                  aria-pressed={staffId === person.id}
+                  onClick={() => setStaffId(person.id)}
+                >
+                  <span className="assignment-top">
+                    <Users size={17} />
+                    {staffId === person.id && <Check size={16} />}
+                  </span>
+                  <strong>{person.name}</strong>
+                  <span>{SKILLS[person.skill]}</span>
+                  <small>
+                    {!available
+                      ? 'Занят / отдыхает'
+                      : !choice
+                        ? 'Сначала выберите решение'
+                        : !matches
+                          ? 'Нужен другой навык'
+                          : 'Готов к поручению'}
+                  </small>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      </div>
+      <footer className="dossier-footer">
+        <div>
+          <strong>
+            Ресурс: {state.resources[file.role]}
+            {choice ? ` → ${state.resources[file.role] - choice.cost}` : ''}
+          </strong>
+          <p>{error ?? 'Сотрудник вернётся к следующей смене.'}</p>
+        </div>
+        <button
+          className="btn-titp"
+          disabled={Boolean(error)}
+          onClick={() => {
+            if (!error) onSubmit(choiceId, staffId);
+          }}
+        >
+          Отправить
+          <ArrowRight size={17} />
+        </button>
+      </footer>
+    </dialog>
   );
 }
