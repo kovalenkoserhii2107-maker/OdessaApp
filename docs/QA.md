@@ -31,6 +31,8 @@ Production preview: manifest scope/start URL `/odessa-app/`, offline fallback и
 
 ## Ограничения
 
+После повторной проверки публикации: исправленная сборка для `/OdessaApp/` успешно отправлена в gh-pages приватного репозитория, manifest прочитан через GitHub API. Включение Pages отклонено API 422 из-за тарифа. Старый публичный odessa-app больше недоступен (нет в gh repo list; push: Repository not found). Пользователю предложен выбор размещения. Исходники d11c7e3 прошли GitHub Actions. На 1280×900 настольная раскладка сохранена, overflow и console errors отсутствуют; снимок `.local/qa/09-desktop-regression.png`.
+
 - Google OAuth не завершался от имени пользователя; интеграция сохранена, ошибки переведены на понятный язык. Нужны разрешённые домены в Firebase.
 - Настоящий iPhone и диалог установки ОС не эмулировались. Manifest, PNG и service worker проверяются в production build.
 - Совместной серверной игры ещё нет; это явно указано в приложении и README.
