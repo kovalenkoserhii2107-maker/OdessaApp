@@ -14,7 +14,7 @@ export interface Staff {
 export interface Choice {
   id: string; title: string; description: string; cost: number; skill?: Skill;
   effects: Effects; response: string;
-  consequence?: { afterTicks: number; audience: RoleId; text: string; effects: Effects };
+  consequence?: { afterTicks: number; audience: RoleId | 'all'; text: string; effects: Effects };
 }
 export interface CaseFile {
   id: string; role: RoleId; kind: 'story' | 'personal'; title: string; summary: string;
@@ -28,7 +28,7 @@ export interface JournalEntry {
   id: string; tick: number; audience: RoleId | 'all'; title: string; text: string;
 }
 export interface PendingConsequence {
-  id: string; dueTick: number; audience: RoleId; text: string; effects: Effects;
+  id: string; dueTick: number; audience: RoleId | 'all'; text: string; effects: Effects;
 }
 export interface GameState {
   version: 1; tick: number; nextTickAt: number; clockOffset: number;
