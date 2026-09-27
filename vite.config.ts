@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Set the deployment path explicitly when publishing to another host/repository.
-const base = process.env.VITE_BASE_PATH ?? '/odessa-app/';
+const base = process.env.VITE_BASE_PATH ?? '/OdessaApp/';
 if (!/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(base)) {
   throw new Error('VITE_BASE_PATH must be / or a path such as /OdessaApp/');
 }

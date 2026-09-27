@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, copyFile, writeFile, access } from 'node:fs/promises';
 
-const base = process.env.VITE_BASE_PATH ?? '/odessa-app/';
+const base = process.env.VITE_BASE_PATH ?? '/OdessaApp/';
 const origin = 'https://example.invalid';
 const manifestUrl = new URL(`${base}manifest.webmanifest`, origin);
 const manifest = JSON.parse(await readFile('dist/manifest.webmanifest', 'utf8'));
