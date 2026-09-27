@@ -19,7 +19,7 @@ export interface Choice {
 export interface CaseFile {
   id: string; role: RoleId; kind: 'story' | 'personal'; title: string; summary: string;
   sender: string; location: string; coordinates: [number, number]; body: string;
-  reference: string; requires?: string; choices: Choice[];
+  reference: string; requires?: string; minTick?: number; choices: Choice[];
 }
 export interface Decision {
   caseId: string; choiceId: string; staffId: string; tick: number; applied: boolean;

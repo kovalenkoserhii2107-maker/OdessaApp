@@ -27,7 +27,13 @@ export function useGameState(role: RoleId | null) {
   }, [state]);
 
   // Get active cases for current role
-  const activeCases = CASES.filter(c => c.role === role && !state.decisions.find(d => d.caseId === c.id));
+  const activeCases = CASES.filter(c => {
+    if (c.role !== role) return false;
+    if (state.decisions.find(d => d.caseId === c.id)) return false;
+    if (c.minTick !== undefined && state.tick < c.minTick) return false;
+    if (c.requires && !state.decisions.find(d => d.caseId === c.requires)) return false;
+    return true;
+  });
   
   // Get available staff for current role
   const availableStaff = state.staff.filter(s => s.role === role && s.busyUntilTick <= state.tick);
