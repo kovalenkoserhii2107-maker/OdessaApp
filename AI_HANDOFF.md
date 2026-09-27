@@ -6,7 +6,7 @@
 
 - Рабочий репозиторий: https://github.com/kovalenkoserhii2107-maker/odessa-app, ветка `main`.
 - Путь на Mac: `/Users/Serhii/Desktop/OdessaApp`.
-- Не путать с ранее созданным пустым приватным `OdessaApp`. Существующий `origin` — источник истины; не переключайте его.
+- Приватный `OdessaApp` первоначально оставался пустым; 27 сентября по обращению пользователя в него также отправлена текущая ветка main. Это дополнительная копия. Рабочий `origin` остаётся `odessa-app`; автоматического зеркалирования между репозиториями нет. Не переключайте remote и не меняйте видимость без задачи.
 - Node 24, React 19, TypeScript, Vite 8, Firebase Auth, Zod, react-zoom-pan-pinch, vite-plugin-pwa, Vitest. `package.json` теперь ESM; `build_map.js` использует import.
 - Firebase client config уже настроен предыдущим автором; это публичный веб-конфиг. Не придумывайте сервисные ключи и не заменяйте Firebase другой платформой без задачи.
 - Публикация настроена на GitHub Pages, путь `/odessa-app/`. Push кода и deploy — разные операции.
