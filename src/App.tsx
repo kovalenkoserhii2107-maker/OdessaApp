@@ -4,6 +4,7 @@ import { CHARACTERS, SKILLS } from './game/content';
 import type { RoleId } from './game/types';
 import InstallPWA from './components/InstallPWA';
 import OdessaMap from './components/OdessaMap';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useGameState } from './hooks/useGameState';
 import { auth, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -170,30 +171,34 @@ export default function App() {
             {/* The "Map" Area */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#16191b' }}>
               
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.8 }}>
-                <OdessaMap>
-                  {activeCases.map((c, index) => {
-                    const coords = [
-                      { x: 700, y: 900 }, // Приморский
-                      { x: 450, y: 900 }, // Малиновский
-                      { x: 600, y: 1400 }, // Киевский
-                      { x: 650, y: 300 } // Суворовский
-                    ][index % 4];
-                    
-                    return (
-                      <foreignObject key={c.id} x={coords.x - 100} y={coords.y - 100} width="200" height="200" style={{ overflow: 'visible' }}>
-                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <div className="map-case-icon" style={{ position: 'relative' }} onClick={() => setSelectedCaseId(c.id)}>
-                            {c.kind === 'story' ? <AlertTriangle size={24} /> : <Briefcase size={24} />}
-                          </div>
-                          <div style={{ marginTop: '12px', backgroundColor: 'rgba(0,0,0,0.8)', padding: '4px 12px', fontSize: '1rem', whiteSpace: 'nowrap', border: '1px solid #444', color: '#fff', fontWeight: 700, textAlign: 'center', borderRadius: '4px' }}>
-                            {c.title}
-                          </div>
-                        </div>
-                      </foreignObject>
-                    );
-                  })}
-                </OdessaMap>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.8, cursor: 'grab' }}>
+                <TransformWrapper initialScale={1} minScale={0.5} maxScale={4} centerOnInit>
+                  <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
+                    <OdessaMap>
+                      {activeCases.map((c, index) => {
+                        const coords = [
+                          { x: 700, y: 900 }, // Приморский
+                          { x: 450, y: 900 }, // Малиновский
+                          { x: 600, y: 1400 }, // Киевский
+                          { x: 650, y: 300 } // Суворовский
+                        ][index % 4];
+                        
+                        return (
+                          <foreignObject key={c.id} x={coords.x - 100} y={coords.y - 100} width="200" height="200" style={{ overflow: 'visible' }}>
+                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                              <div className="map-case-icon" style={{ position: 'relative' }} onClick={(e) => { e.stopPropagation(); setSelectedCaseId(c.id); }}>
+                                {c.kind === 'story' ? <AlertTriangle size={24} /> : <Briefcase size={24} />}
+                              </div>
+                              <div style={{ marginTop: '12px', backgroundColor: 'rgba(0,0,0,0.8)', padding: '4px 12px', fontSize: '1rem', whiteSpace: 'nowrap', border: '1px solid #444', color: '#fff', fontWeight: 700, textAlign: 'center', borderRadius: '4px' }}>
+                                {c.title}
+                              </div>
+                            </div>
+                          </foreignObject>
+                        );
+                      })}
+                    </OdessaMap>
+                  </TransformComponent>
+                </TransformWrapper>
               </div>
 
               {/* Event Journal (Right side overlay) */}
